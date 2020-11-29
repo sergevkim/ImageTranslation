@@ -10,7 +10,11 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
 
-from tirma.models.pix2pix_blocks import Pix2PixDecoder, Pix2PixEncoder
+from tirma.models.pix2pix_blocks import (
+    Pix2PixDecoder,
+    Pix2PixEncoder,
+    Pix2PixUNet,
+)
 
 
 class Pix2PixTranslator(Module):
@@ -20,6 +24,7 @@ class Pix2PixTranslator(Module):
             learning_rate: float,
             scheduler_step_size: int,
             scheduler_gamma: float,
+            mode: str,
             encoder_blocks_num: int,
             decoder_blocks_num: int,
             verbose: bool,
@@ -30,24 +35,34 @@ class Pix2PixTranslator(Module):
         self.learning_rate = learning_rate
         self.scheduler_step_size = scheduler_step_size
         self.scheduler_gamma = scheduler_gamma
+        self.mode = mode
         self.criterion = MSELoss()
         self.verbose = verbose
 
-        self.encoder = Pix2PixEncoder(
-            blocks_num=encoder_blocks_num,
-        )
-        self.decoder = Pix2PixDecoder(
-            blocks_num=decoder_blocks_num,
-        )
+        if mode == 'unet':
+            self.unet = Pix2PixUNet(
+                blocks_num=encoder_blocks_num,
+            )
+            self.net = unet
+        else:
+            self.encoder = Pix2PixEncoder(
+                blocks_num=encoder_blocks_num,
+            )
+            self.decoder = Pix2PixDecoder(
+                blocks_num=decoder_blocks_num,
+            )
 
     def forward(
             self,
             x: Tensor,
         ) -> Tensor:
-        encoded_x = self.encoder(x)
-        decoded_x = self.decoder(encoded_x)
-
-        return decoded_x
+        if self.mode == 'unet':
+            unetted_x = self.unet(x)
+            return unetted_x
+        else:
+            encoded_x = self.encoder(x)
+            decoded_x = self.decoder(encoded_x)
+            return decoded_x
 
     def training_step(
             self,
@@ -75,7 +90,15 @@ class Pix2PixTranslator(Module):
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        pass
+        left, right = batch
+        left = left.to(self.device)
+        right = right.to(self.device)
+
+        left_hat = self(right)
+
+        loss = self.criterion(left_hat, left)
+
+        return loss
 
     def validation_step_end(self):
         pass

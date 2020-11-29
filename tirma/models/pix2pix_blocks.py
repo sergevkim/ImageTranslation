@@ -10,6 +10,7 @@ from torch.nn import (
     Dropout,
     LeakyReLU,
     Module,
+    ModuleList,
     ReLU,
     Sequential,
 )
@@ -124,4 +125,42 @@ class Pix2PixDecoder(Module):
             x: Tensor,
         ) -> Tensor:
         return self.blocks_sequential(x)
+
+
+class Pix2PixUNet(Module):
+    def __init__(
+            self,
+            blocks_num: int,
+        ):
+        super().__init__()
+        self.blocks_num = blocks_num
+
+        self.encoder_blocks = ModuleList()
+        self.encoder_blocks.append(EncoderBlock())
+        for i in range(1, blocks_num):
+            self.encoder_blocks.append(EncoderBlock())
+
+        self.decoder_blocks = ModuleList()
+        for i in range(blocks_num - 1):
+            self.decoder_blocks.append(DecoderBlock())
+        self.decoder_blocks.append(DecoderBlock())
+
+    def forward(
+            self,
+            x: Tensor,
+        ) -> Tensor:
+        encoded_x = list(None for i in range(self.num_blocks))
+
+        for i, encoder_block in enumerate(self.encoder_blocks):
+            x = encoder_block(x)
+            encoded_x[i] = x
+
+        for i, decoder_block in enumerate(self.decoder_blocks):
+            xx = torch.cat(
+                tensors=[x, encoded_x[self.blocks_num - i]],
+                dim=1,
+            )
+            x = decoder_block(xx)
+
+        return x
 
