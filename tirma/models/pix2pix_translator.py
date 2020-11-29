@@ -7,7 +7,7 @@ from torch.nn import (
     MSELoss,
 )
 from torch.optim import Adam
-from torch.optim.lr_scheduler import _LRScheduler, LambdaLR
+from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
 
 from tirma.models.pix2pix_blocks import Pix2PixDecoder, Pix2PixEncoder
@@ -20,15 +20,25 @@ class Pix2PixTranslator(Module):
             learning_rate: float,
             scheduler_step_size: int,
             scheduler_gamma: float,
+            encoder_blocks_num: int,
+            decoder_blocks_num: int,
             verbose: bool,
         ):
         super().__init__()
 
         self.device = device
+        self.learning_rate = learning_rate
+        self.scheduler_step_size = scheduler_step_size
+        self.scheduler_gamma = scheduler_gamma
         self.criterion = MSELoss()
+        self.verbose = verbose
 
-        self.encoder = Pix2PixEncoder()
-        self.decoder = Pix2PixDecoder()
+        self.encoder = Pix2PixEncoder(
+            blocks_num=encoder_blocks_num,
+        )
+        self.decoder = Pix2PixDecoder(
+            blocks_num=decoder_blocks_num,
+        )
 
     def forward(
             self,
@@ -78,11 +88,10 @@ class Pix2PixTranslator(Module):
             params=self.parameters(),
             lr=self.learning_rate,
         )
-        scheduler = LambdaLR(
+        scheduler = StepLR(
             optimizer=optimizer,
-            step_size=self.step_size,
-            gamma=self.gamma,
-            verbose=self.verbose,
+            step_size=self.scheduler_step_size,
+            gamma=self.scheduler_gamma,
         )
 
         return optimizer, scheduler

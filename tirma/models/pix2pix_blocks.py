@@ -9,7 +9,6 @@ from torch.nn import (
     ConvTranspose2d,
     Dropout,
     LeakyReLU,
-    MaxPool2d,
     Module,
     ReLU,
     Sequential,
@@ -33,7 +32,6 @@ class EncoderBlock(Module):
             ),
             batch_norm=BatchNorm2d(num_features=out_channels),
             leaky_relu=LeakyReLU(negative_slope=0.2),
-            max_pool=MaxPool2d(),
         )
         self.block_sequential = Sequential(block_ordered_dict)
 
@@ -60,7 +58,7 @@ class DecoderBlock(Module):
                 stride=2,
                 padding=1,
             ),
-            batch_norm=BatchNorm2d(),
+            batch_norm=BatchNorm2d(num_features=out_channels),
             dropout=Dropout(p=dropout_p),
             relu=ReLU(),
         )
@@ -103,6 +101,7 @@ class Pix2PixEncoder(Module):
 class Pix2PixDecoder(Module):
     def __init__(
             self,
+            blocks_num: int,
         ):
         super().__init__()
         blocks_ordered_dict = OrderedDict()

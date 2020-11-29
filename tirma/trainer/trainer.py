@@ -98,6 +98,7 @@ class Trainer:
         self.validation_epoch(
             model=model,
             val_dataloader=val_dataloader,
+            scheduler=scheduler,
             epoch_idx=0,
         )
         for epoch_idx in range(1, self.max_epoch + 1):
@@ -110,8 +111,8 @@ class Trainer:
             self.validation_epoch(
                 model=model,
                 val_dataloader=val_dataloader,
-                epoch_idx=epoch_idx,
                 scheduler=scheduler,
+                epoch_idx=epoch_idx,
             )
             if epoch_idx % 5 == 0:
                 self.save_checkpoint(
