@@ -55,15 +55,6 @@ def main(args):
         datamodule=datamodule,
     )
 
-    checkpoint = torch.load('models/v0.0.1-e10.hdf5', map_location=torch.device('cuda'))
-    model.load_state_dict(checkpoint['model_state_dict'])
-    epoch_start = checkpoint['epoch_idx']
-
-    trainer.predict(
-        model=model,
-        datamodule=datamodule,
-    )
-
 
 if __name__ == "__main__":
     parser = ArgumentParser()

@@ -124,7 +124,7 @@ class Trainer:
                 scheduler=scheduler,
                 epoch_idx=epoch_idx,
             )
-            if epoch_idx % 5 == 0:
+            if epoch_idx % 20 == 0:
                 self.save_checkpoint(
                     model=model,
                     optimizer=optimizer,

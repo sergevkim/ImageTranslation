@@ -5,7 +5,12 @@ from typing import Dict, List, Tuple
 import torch
 from torch import Tensor
 from torch.utils.data import Dataset, DataLoader
-from torchvision.transforms import Resize, ToTensor
+from torchvision.transforms import (
+    Compose,
+    Normalize,
+    Resize,
+    ToTensor,
+)
 
 
 class CityscapesDataset(Dataset):
@@ -17,6 +22,15 @@ class CityscapesDataset(Dataset):
         self.dual_image_paths = dual_image_paths
         self.new_size = new_size
 
+        transform_list = [
+            ToTensor(),
+            Normalize(
+                (0.485, 0.456, 0.406),
+                (0.229, 0.224, 0.225),
+            ),
+        ]
+        self.transform = Compose(transform_list)
+
     def __len__(self) -> int:
         return len(self.dual_image_paths)
 
@@ -26,7 +40,7 @@ class CityscapesDataset(Dataset):
         ) -> Tuple[Tensor, Tensor]:
         dual_image_path = self.dual_image_paths[idx]
         dual_image = Image.open(dual_image_path)
-        dual_tensor = ToTensor()(dual_image)
+        dual_tensor = self.transform(dual_image)
 
         c, h, w = dual_tensor.shape
         left_tensor, right_tensor = torch.split(
@@ -56,14 +70,15 @@ class CityscapesDataModule:
         ) -> Dict[str, List[Path]]:
         trainval_data_path = data_path / 'train'
 
-        trainval_image_paths = list(
+        trainval_image_paths = sorted(list(
             p
             for p in trainval_data_path.glob('*')
-        )
+        ))
 
         if one_batch_overfit:
             print("WARNING! One batch overfitting!")
             trainval_image_paths = trainval_image_paths[:3]
+            print(trainval_image_paths)
 
         data = dict(
             trainval_image_paths=trainval_image_paths,

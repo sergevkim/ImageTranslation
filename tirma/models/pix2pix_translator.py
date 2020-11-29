@@ -3,6 +3,7 @@ from typing import Tuple
 import torch
 from torch import Tensor
 from torch.nn import (
+    L1Loss,
     Module,
     MSELoss,
 )
