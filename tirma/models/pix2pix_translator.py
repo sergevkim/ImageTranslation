@@ -81,8 +81,12 @@ class Pix2PixTranslator(Module):
     def training_step_end(self):
         pass
 
-    def training_epoch_end(self):
-        pass
+    def training_epoch_end(
+            self,
+            epoch_idx: int,
+        ) -> None:
+        if self.verbose:
+            print(f"Training epoch {epoch_idx} is over.")
 
     def validation_step(
             self,
@@ -102,8 +106,12 @@ class Pix2PixTranslator(Module):
     def validation_step_end(self):
         pass
 
-    def validation_epoch_end(self):
-        pass
+    def validation_epoch_end(
+            self,
+            epoch_idx: int,
+        ) -> None:
+        if self.verbose:
+            print(f"Validation epoch {epoch_idx} is over.")
 
     def configure_optimizers(self) -> Tuple[Optimizer, _LRScheduler]:
         optimizer = Adam(

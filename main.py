@@ -28,13 +28,15 @@ def main(args):
         verbose=args.verbose,
         device=args.device,
     )
-    print(model)
     datamodule = CityscapesDataModule(
         data_path=args.data_path,
-        batch_size=args.batch_size,
+        batch_size=args.batch_size if not args.one_batch_overfit else 2,
         num_workers=args.num_workers,
     )
-    datamodule.setup(val_ratio=args.val_ratio)
+    datamodule.setup(
+        val_ratio=args.val_ratio,
+        one_batch_overfit=args.one_batch_overfit,
+    )
 
     #logger = NeptuneLogger(
     #    api_key=None,

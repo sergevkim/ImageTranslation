@@ -12,7 +12,7 @@ class CityscapesDataset(Dataset):
     def __init__(
             self,
             dual_image_paths: List[Path],
-            new_size: Tuple[int, int]=(224, 244),
+            new_size: Tuple[int, int]=(256, 256),
         ):
         self.dual_image_paths = dual_image_paths
         self.new_size = new_size
@@ -52,16 +52,21 @@ class CityscapesDataModule:
     @staticmethod
     def prepare_data(
             data_path: Path,
+            one_batch_overfit: bool=False,
         ) -> Dict[str, List[Path]]:
-        train_val_data_path = data_path / 'train'
+        trainval_data_path = data_path / 'train'
 
-        train_dual_image_paths = list(
+        trainval_image_paths = list(
             p
-            for p in train_val_data_path.glob('*')
+            for p in trainval_data_path.glob('*')
         )
 
+        if one_batch_overfit:
+            print("WARNING! One batch overfitting!")
+            trainval_image_paths = trainval_image_paths[:3]
+
         data = dict(
-            train_dual_image_paths=train_dual_image_paths,
+            trainval_image_paths=trainval_image_paths,
         )
 
         return data
@@ -69,16 +74,18 @@ class CityscapesDataModule:
     def setup(
             self,
             val_ratio: float,
+            one_batch_overfit: bool=False,
         ) -> None:
         data = self.prepare_data(
             data_path=self.data_path,
+            one_batch_overfit=one_batch_overfit,
         )
         trainval_dataset = CityscapesDataset(
-            dual_image_paths=data['train_dual_image_paths'],
+            dual_image_paths=data['trainval_image_paths'],
         )
 
         trainval_size = len(trainval_dataset)
-        val_size = int(val_ratio * trainval_size)
+        val_size = max(int(val_ratio * trainval_size), 1)
         train_size = trainval_size - val_size
 
         self.train_dataset, self.val_dataset = torch.utils.data.random_split(

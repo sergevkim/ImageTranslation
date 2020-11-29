@@ -185,3 +185,8 @@ class Pix2PixUNet(Module):
 
         return x
 
+
+if __name__ == '__main__':
+    model = Pix2PixUNet(blocks_num=8)
+    print(model)
+

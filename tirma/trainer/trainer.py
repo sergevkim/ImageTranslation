@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import List
+from typing import List, Optional
 
 import torch
 from torch import Tensor
@@ -52,14 +52,21 @@ class Trainer:
             epoch_idx: int,
         ) -> None:
         model.train()
+        losses = list()
 
         for batch_idx, batch in enumerate(tqdm.tqdm(train_dataloader)):
             loss = model.training_step(batch, batch_idx)
+            losses.append(loss.item())
             loss.backward()
             utils.clip_grad_norm_(parameters=model.parameters(), max_norm=10)
             optimizer.step()
             optimizer.zero_grad()
             model.training_step_end()
+
+        average_loss = sum(losses) / len(losses)
+
+        if self.verbose:
+            print(epoch_idx, average_loss)
 
         model.training_epoch_end(epoch_idx=epoch_idx)
 
@@ -68,7 +75,7 @@ class Trainer:
             self,
             model: Module,
             val_dataloader: DataLoader,
-            scheduler: _LRScheduler,
+            scheduler: Optional[_LRScheduler],
             epoch_idx: int,
         ) -> None:
         model.eval()
@@ -80,11 +87,14 @@ class Trainer:
             model.validation_step_end()
 
         average_loss = sum(losses) / len(losses)
-        scheduler.step()
-        model.validation_epoch_end(epoch_idx=epoch_idx)
 
         if self.verbose:
             print(epoch_idx, average_loss)
+
+        if scheduler is not None:
+            scheduler.step()
+
+        model.validation_epoch_end(epoch_idx=epoch_idx)
 
     def fit(
             self,
@@ -98,7 +108,7 @@ class Trainer:
         self.validation_epoch(
             model=model,
             val_dataloader=val_dataloader,
-            scheduler=scheduler,
+            scheduler=None,
             epoch_idx=0,
         )
         for epoch_idx in range(1, self.max_epoch + 1):

@@ -23,6 +23,7 @@ class DataArguments:
 @dataclass
 class TrainArguments:
     max_epoch: int = 10
+    one_batch_overfit: bool = True
     scheduler_gamma: float = 0.5
     scheduler_step_size: int = 10
 
