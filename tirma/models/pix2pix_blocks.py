@@ -136,28 +136,49 @@ class Pix2PixUNet(Module):
         self.blocks_num = blocks_num
 
         self.encoder_blocks = ModuleList()
-        self.encoder_blocks.append(EncoderBlock())
+        self.encoder_blocks.append(EncoderBlock(
+            in_channels=3,
+            out_channels=512,
+        ))
         for i in range(1, blocks_num):
-            self.encoder_blocks.append(EncoderBlock())
+            self.encoder_blocks.append(EncoderBlock(
+                in_channels=512,
+                out_channels=512,
+            ))
 
         self.decoder_blocks = ModuleList()
-        for i in range(blocks_num - 1):
-            self.decoder_blocks.append(DecoderBlock())
-        self.decoder_blocks.append(DecoderBlock())
+        self.decoder_blocks.append(DecoderBlock(
+            in_channels=512,
+            out_channels=512,
+        ))
+        for i in range(1, blocks_num - 1):
+            self.decoder_blocks.append(DecoderBlock(
+                in_channels=1024,
+                out_channels=512,
+            ))
+        self.decoder_blocks.append(DecoderBlock(
+            in_channels=1024,
+            out_channels=3,
+        ))
 
     def forward(
             self,
             x: Tensor,
         ) -> Tensor:
-        encoded_x = list(None for i in range(self.num_blocks))
+        encoded_x = list(None for i in range(self.blocks_num))
 
         for i, encoder_block in enumerate(self.encoder_blocks):
             x = encoder_block(x)
             encoded_x[i] = x
 
+        x = self.decoder_blocks[0](x)
+
         for i, decoder_block in enumerate(self.decoder_blocks):
+            if i == 0:
+                continue
+
             xx = torch.cat(
-                tensors=[x, encoded_x[self.blocks_num - i]],
+                tensors=[x, encoded_x[self.blocks_num - 1 - i]],
                 dim=1,
             )
             x = decoder_block(xx)

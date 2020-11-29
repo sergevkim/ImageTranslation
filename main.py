@@ -22,11 +22,13 @@ def main(args):
         learning_rate=args.learning_rate,
         scheduler_gamma=args.scheduler_gamma,
         scheduler_step_size=args.scheduler_step_size,
+        mode=args.mode,
         encoder_blocks_num=args.encoder_blocks_num,
         decoder_blocks_num=args.decoder_blocks_num,
         verbose=args.verbose,
         device=args.device,
     )
+    print(model)
     datamodule = CityscapesDataModule(
         data_path=args.data_path,
         batch_size=args.batch_size,

@@ -43,7 +43,6 @@ class Pix2PixTranslator(Module):
             self.unet = Pix2PixUNet(
                 blocks_num=encoder_blocks_num,
             )
-            self.net = unet
         else:
             self.encoder = Pix2PixEncoder(
                 blocks_num=encoder_blocks_num,

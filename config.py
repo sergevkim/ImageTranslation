@@ -29,6 +29,7 @@ class TrainArguments:
 
 @dataclass
 class SpecificArguments:
+    mode: str = 'unet'
     encoder_blocks_num: int = 8
     decoder_blocks_num: int = 8
 
