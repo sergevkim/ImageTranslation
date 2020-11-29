@@ -27,7 +27,7 @@ def main(args):
         decoder_blocks_num=args.decoder_blocks_num,
         verbose=args.verbose,
         device=args.device,
-    )
+    ).to(args.device)
     datamodule = CityscapesDataModule(
         data_path=args.data_path,
         batch_size=args.batch_size if not args.one_batch_overfit else 2,
@@ -51,6 +51,15 @@ def main(args):
     )
 
     trainer.fit(
+        model=model,
+        datamodule=datamodule,
+    )
+
+    checkpoint = torch.load('models/v0.0.1-e10.hdf5', map_location=torch.device('cuda'))
+    model.load_state_dict(checkpoint['model_state_dict'])
+    epoch_start = checkpoint['epoch_idx']
+
+    trainer.predict(
         model=model,
         datamodule=datamodule,
     )

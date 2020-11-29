@@ -10,7 +10,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 import tqdm
 
-from protostar.datamodules import ProtostarDataModule
+from tirma.datamodules import CityscapesDataModule
 
 
 class Trainer:
@@ -99,7 +99,7 @@ class Trainer:
     def fit(
             self,
             model: Module,
-            datamodule: ProtostarDataModule,
+            datamodule: CityscapesDataModule,
         ) -> None:
         train_dataloader = datamodule.train_dataloader()
         val_dataloader = datamodule.val_dataloader()
@@ -136,7 +136,7 @@ class Trainer:
     def predict(
             self,
             model: Module,
-            datamodule: ProtostarDataModule,
+            datamodule: CityscapesDataModule,
         ) -> List[Tensor]:
         test_dataloader = datamodule.test_dataloader()
 
