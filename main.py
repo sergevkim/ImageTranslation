@@ -1,10 +1,10 @@
 from argparse import ArgumentParser
 from pathlib import Path
 
-from trima.datamodules import CityscapesDataModule
-from trima.loggers import NeptuneLogger
-from trima.models import CycleGANTranslator, Pix2PixTranslator
-from trima.trainer import Trainer
+from tirma.datamodules import CityscapesDataModule
+from tirma.loggers import NeptuneLogger
+from tirma.models import CycleGANTranslator, Pix2PixTranslator
+from tirma.trainer import Trainer
 
 from config import Arguments
 

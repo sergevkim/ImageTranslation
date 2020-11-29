@@ -4,10 +4,13 @@ import torch
 from torch import Tensor
 from torch.nn import (
     Module,
+    MSELoss,
 )
 from torch.optim import Adam
 from torch.optim.lr_scheduler import _LRScheduler, LambdaLR
 from torch.optim.optimizer import Optimizer
+
+from tirma.models.pix2pix_blocks import Pix2PixDecoder, Pix2PixEncoder
 
 
 class Pix2PixTranslator(Module):
@@ -21,18 +24,35 @@ class Pix2PixTranslator(Module):
         ):
         super().__init__()
 
+        self.device = device
+        self.criterion = MSELoss()
+
+        self.encoder = Pix2PixEncoder()
+        self.decoder = Pix2PixDecoder()
+
     def forward(
             self,
             x: Tensor,
         ) -> Tensor:
-        pass
+        encoded_x = self.encoder(x)
+        decoded_x = self.decoder(encoded_x)
+
+        return decoded_x
 
     def training_step(
             self,
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        pass
+        left, right = batch
+        left = left.to(self.device)
+        right = right.to(self.device)
+
+        left_hat = self(right)
+
+        loss = self.criterion(left_hat, left)
+
+        return loss
 
     def training_step_end(self):
         pass
