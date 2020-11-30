@@ -1,5 +1,4 @@
 from argparse import ArgumentParser
-from pathlib import Path
 
 from tirma.datamodules import CityscapesDataModule
 from tirma.loggers import NeptuneLogger
@@ -70,7 +69,7 @@ if __name__ == "__main__":
             f'--{arg}',
             type=type(value),
             default=value,
-            help=f'<{arg}>, default: {value}'
+            help=f'<{arg}>, default: {value}',
         )
 
     args = parser.parse_args()

@@ -37,7 +37,7 @@ class Pix2PixTranslator(Module):
         self.scheduler_step_size = scheduler_step_size
         self.scheduler_gamma = scheduler_gamma
         self.mode = mode
-        self.criterion = MSELoss()
+        self.criterion = L1Loss()
         self.verbose = verbose
 
         if mode == 'unet':

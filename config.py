@@ -13,8 +13,8 @@ class CommonArguments:
 
 @dataclass
 class DataArguments:
-    batch_size: int = 64
-    data_path: Path = Path('./data/cityscapes')
+    batch_size: int = 16
+    data_path: Path = Path('./data/facades')
     learning_rate: float = 3e-4
     num_workers: int = 4
     val_ratio: float = 0.1

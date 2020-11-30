@@ -13,6 +13,7 @@ from torch.nn import (
     ModuleList,
     ReLU,
     Sequential,
+    Tanh,
 )
 
 
@@ -21,18 +22,22 @@ class EncoderBlock(Module):
             self,
             in_channels: int,
             out_channels: int,
+            kernel_size: int = 4,
+            stride: int = 2,
+            padding: int = 1,
         ):
         super().__init__()
         block_ordered_dict = OrderedDict(
-            conv=Conv2d(
+            conv = Conv2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
-                kernel_size=4,
-                stride=2,
-                padding=1,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
             ),
             batch_norm=BatchNorm2d(num_features=out_channels),
-            leaky_relu=LeakyReLU(negative_slope=0.2),
+            #leaky_relu=LeakyReLU(negative_slope=0.2),
+            relu=ReLU(),
         )
         self.block_sequential = Sequential(block_ordered_dict)
 
@@ -48,16 +53,19 @@ class DecoderBlock(Module):
             self,
             in_channels: int,
             out_channels: int,
-            dropout_p: float=0.5,
+            kernel_size: int = 4,
+            stride: int = 2,
+            padding: int = 1,
+            dropout_p: float = 0.5,
         ):
         super().__init__()
         block_ordered_dict = OrderedDict(
             conv=ConvTranspose2d(
                 in_channels=in_channels,
                 out_channels=out_channels,
-                kernel_size=4,
-                stride=2,
-                padding=1,
+                kernel_size=kernel_size,
+                stride=stride,
+                padding=padding,
             ),
             batch_norm=BatchNorm2d(num_features=out_channels),
             dropout=Dropout(p=dropout_p),
@@ -131,45 +139,75 @@ class Pix2PixUNet(Module):
     def __init__(
             self,
             blocks_num: int,
+            hidden_dim: int = 512,
         ):
         super().__init__()
         self.blocks_num = blocks_num
+        self.hidden_dim = hidden_dim
 
         self.encoder_blocks = ModuleList()
         self.encoder_blocks.append(EncoderBlock(
             in_channels=3,
-            out_channels=512,
+            out_channels=hidden_dim,
         ))
         for i in range(1, blocks_num):
             self.encoder_blocks.append(EncoderBlock(
-                in_channels=512,
-                out_channels=512,
+                in_channels=hidden_dim,
+                out_channels=hidden_dim,
             ))
 
         self.decoder_blocks = ModuleList()
         self.decoder_blocks.append(DecoderBlock(
-            in_channels=512,
-            out_channels=512,
+            in_channels=hidden_dim,
+            out_channels=hidden_dim,
+            dropout_p=0.5,
         ))
+
         for i in range(1, blocks_num - 1):
             self.decoder_blocks.append(DecoderBlock(
-                in_channels=1024,
-                out_channels=512,
+                in_channels=hidden_dim * 2,
+                out_channels=hidden_dim,
+                dropout_p=0.5 if i < 3 else 0,
             ))
-        self.decoder_blocks.append(DecoderBlock(
-            in_channels=1024,
-            out_channels=3,
+
+        self.decoder_blocks.append(Sequential(
+            ConvTranspose2d(
+                in_channels=hidden_dim * 2,
+                out_channels=3,
+                kernel_size=4,
+                stride=2,
+                padding=1,
+            ),
+            Tanh(),
         ))
+
+        self.conv_1 = Sequential(
+            Conv2d(3, hidden_dim, kernel_size=3, padding=1),
+            ReLU(),
+        )
+        self.conv_2 = Sequential(
+            Conv2d(hidden_dim, hidden_dim * 2, kernel_size=3, padding=1),
+            ReLU(),
+        )
+        self.conv_3 = Sequential(
+            Conv2d(hidden_dim * 2, hidden_dim, kernel_size=3, padding=1),
+            ReLU(),
+        )
+        self.conv_4 = Sequential(
+            Conv2d(hidden_dim, 3, kernel_size=3, padding=1),
+            Tanh(),
+        )
 
     def forward(
             self,
             x: Tensor,
         ) -> Tensor:
+        '''
         encoded_x = list(None for i in range(self.blocks_num))
 
         for i, encoder_block in enumerate(self.encoder_blocks):
             x = encoder_block(x)
-            encoded_x[i] = x
+            encoded_x[i] = x.clone().detach()
 
         x = self.decoder_blocks[0](x)
 
@@ -182,6 +220,13 @@ class Pix2PixUNet(Module):
                 dim=1,
             )
             x = decoder_block(xx)
+
+        return x
+        '''
+        x = self.conv_1(x)
+        x = self.conv_2(x)
+        x = self.conv_3(x)
+        x = self.conv_4(x)
 
         return x
 
