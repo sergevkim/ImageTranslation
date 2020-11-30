@@ -35,9 +35,8 @@ class EncoderBlock(Module):
                 stride=stride,
                 padding=padding,
             ),
-            batch_norm=BatchNorm2d(num_features=out_channels),
-            #leaky_relu=LeakyReLU(negative_slope=0.2),
-            relu=ReLU(),
+            #batch_norm=BatchNorm2d(num_features=out_channels),
+            leaky_relu=LeakyReLU(negative_slope=0.2),
         )
         self.block_sequential = Sequential(block_ordered_dict)
 
@@ -67,7 +66,7 @@ class DecoderBlock(Module):
                 stride=stride,
                 padding=padding,
             ),
-            batch_norm=BatchNorm2d(num_features=out_channels),
+            #batch_norm=BatchNorm2d(num_features=out_channels),
             dropout=Dropout(p=dropout_p),
             relu=ReLU(),
         )
@@ -163,38 +162,20 @@ class Pix2PixUNet(Module):
             dropout_p=0.5,
         ))
 
-        for i in range(1, blocks_num - 1):
+        for i in range(1, blocks_num):
             self.decoder_blocks.append(DecoderBlock(
                 in_channels=hidden_dim * 2,
                 out_channels=hidden_dim,
                 dropout_p=0.5 if i < 3 else 0,
             ))
 
-        self.decoder_blocks.append(Sequential(
-            ConvTranspose2d(
-                in_channels=hidden_dim * 2,
+        self.last_conv = Sequential(
+            Conv2d(
+                in_channels=hidden_dim,
                 out_channels=3,
-                kernel_size=4,
-                stride=2,
+                kernel_size=3,
                 padding=1,
             ),
-            Tanh(),
-        ))
-
-        self.conv_1 = Sequential(
-            Conv2d(3, hidden_dim, kernel_size=3, padding=1),
-            ReLU(),
-        )
-        self.conv_2 = Sequential(
-            Conv2d(hidden_dim, hidden_dim * 2, kernel_size=3, padding=1),
-            ReLU(),
-        )
-        self.conv_3 = Sequential(
-            Conv2d(hidden_dim * 2, hidden_dim, kernel_size=3, padding=1),
-            ReLU(),
-        )
-        self.conv_4 = Sequential(
-            Conv2d(hidden_dim, 3, kernel_size=3, padding=1),
             Tanh(),
         )
 
@@ -202,7 +183,6 @@ class Pix2PixUNet(Module):
             self,
             x: Tensor,
         ) -> Tensor:
-        '''
         encoded_x = list(None for i in range(self.blocks_num))
 
         for i, encoder_block in enumerate(self.encoder_blocks):
@@ -221,12 +201,7 @@ class Pix2PixUNet(Module):
             )
             x = decoder_block(xx)
 
-        return x
-        '''
-        x = self.conv_1(x)
-        x = self.conv_2(x)
-        x = self.conv_3(x)
-        x = self.conv_4(x)
+        x = self.last_conv(x)
 
         return x
 
