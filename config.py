@@ -8,7 +8,7 @@ import torch
 class CommonArguments:
     device: torch.device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
     verbose: bool = True
-    version: str = '0.0.1'
+    version: str = '1.0.0'
 
 
 @dataclass
