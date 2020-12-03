@@ -4,13 +4,13 @@ import random
 import numpy as np #TODO remove with set_seed
 import torch
 
-from tirma.datamodules import CityscapesDataModule
-from tirma.loggers import NeptuneLogger
-from tirma.models import (
+from trima.datamodules import CityscapesDataModule
+from trima.loggers import NeptuneLogger
+from trima.models import (
     #CycleGANTranslator,
     Pix2PixTranslator,
 )
-from tirma.trainer import Trainer
+from trima.trainer import Trainer
 
 from config import (
     CommonArguments,

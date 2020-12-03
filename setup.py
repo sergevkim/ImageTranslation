@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 
 def main():
-    package_name = 'tirma'
+    package_name = 'trima'
     packages = find_packages(package_name)
     packages = list(map(lambda x: f'{package_name}/{x}', packages))
 

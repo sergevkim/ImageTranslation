@@ -11,7 +11,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
 
-from tirma.models.pix2pix_blocks import (
+from trima.models.pix2pix_blocks import (
     Pix2PixDecoder,
     Pix2PixEncoder,
     Pix2PixUNet,
