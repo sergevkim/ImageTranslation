@@ -79,66 +79,12 @@ class DecoderBlock(Module):
         return self.block_sequential(x)
 
 
-class Pix2PixEncoder(Module):
-    def __init__(
-            self,
-            blocks_num: int,
-        ):
-        super().__init__()
-        blocks_ordered_dict = OrderedDict()
-        blocks_ordered_dict[f'block_0'] = EncoderBlock(
-            in_channels=3,
-            out_channels=512,
-        )
-
-        for i in range(1, blocks_num):
-            blocks_ordered_dict[f'block_{i}'] = EncoderBlock(
-                in_channels=512,
-                out_channels=512,
-            )
-
-        self.blocks_sequential = Sequential(blocks_ordered_dict)
-
-    def forward(
-            self,
-            x: Tensor,
-        ) -> Tensor:
-        return self.blocks_sequential(x)
-
-
-class Pix2PixDecoder(Module):
-    def __init__(
-            self,
-            blocks_num: int,
-        ):
-        super().__init__()
-        blocks_ordered_dict = OrderedDict()
-
-        for i in range(blocks_num - 1):
-            blocks_ordered_dict[f'block_{i}'] = DecoderBlock(
-                in_channels=512,
-                out_channels=512,
-            )
-
-        blocks_ordered_dict[f'block_{blocks_num - 1}'] = DecoderBlock(
-            in_channels=512,
-            out_channels=3,
-        )
-
-        self.blocks_sequential = Sequential(blocks_ordered_dict)
-
-    def forward(
-            self,
-            x: Tensor,
-        ) -> Tensor:
-        return self.blocks_sequential(x)
-
-
 class Pix2PixUNet(Module):
     def __init__(
             self,
             blocks_num: int,
             hidden_dim: int = 512,
+            out_channels: int = 3,
         ):
         super().__init__()
         self.blocks_num = blocks_num
@@ -172,7 +118,7 @@ class Pix2PixUNet(Module):
         self.last_conv = Sequential(
             Conv2d(
                 in_channels=hidden_dim,
-                out_channels=3,
+                out_channels=out_channels,
                 kernel_size=3,
                 padding=1,
             ),
@@ -207,6 +153,9 @@ class Pix2PixUNet(Module):
 
 
 if __name__ == '__main__':
-    model = Pix2PixUNet(blocks_num=8)
-    print(model)
+    generator = Pix2PixUNet(blocks_num=8)
+    discriminator = Pix2PixConvNet()
+
+    print(generator)
+    print(discriminator)
 

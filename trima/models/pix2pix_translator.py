@@ -15,6 +15,7 @@ from trima.models.pix2pix_components import (
     Pix2PixDecoder,
     Pix2PixEncoder,
     Pix2PixUNet,
+    Pix2PixConvNet,
 )
 
 
@@ -39,30 +40,19 @@ class Pix2PixTranslator(Module):
         self.mode = mode
         self.criterion = L1Loss()
         self.verbose = verbose
-
-        if mode == 'unet':
-            self.unet = Pix2PixUNet(
-                blocks_num=encoder_blocks_num,
-            )
-        else:
-            self.encoder = Pix2PixEncoder(
-                blocks_num=encoder_blocks_num,
-            )
-            self.decoder = Pix2PixDecoder(
-                blocks_num=decoder_blocks_num,
-            )
+        self.generator = Pix2PixUNet(
+            blocks_num=encoder_blocks_num,
+        )
+        self.discriminator = Pix2PixConvNet()
 
     def forward(
             self,
             x: Tensor,
         ) -> Tensor:
         if self.mode == 'unet':
-            unetted_x = self.unet(x)
+            unetted_x = self.generator(x)
+
             return unetted_x
-        else:
-            encoded_x = self.encoder(x)
-            decoded_x = self.decoder(encoded_x)
-            return decoded_x
 
     def training_step(
             self,
