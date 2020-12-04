@@ -1,9 +1,5 @@
 from argparse import ArgumentParser
 
-import random
-import numpy as np #TODO remove with set_seed
-import torch
-
 from trima.datamodules import CityscapesDataModule
 from trima.loggers import NeptuneLogger
 from trima.models import (
@@ -11,6 +7,7 @@ from trima.models import (
     Pix2PixTranslator,
 )
 from trima.trainer import Trainer
+from trima.utils import Randomer
 
 from config import (
     CommonArguments,
@@ -20,16 +17,8 @@ from config import (
 )
 
 
-def set_seed(seed=9):
-    torch.backends.cudnn.deterministic = True
-    torch.manual_seed(seed)
-    torch.cuda.manual_seed(seed)
-    random.seed(seed)
-    np.random.seed(seed)
-
-
 def main(args):
-    set_seed()
+    Randomer.set_seed(seed=args.seed)
 
     model = Pix2PixTranslator(
         learning_rate=args.learning_rate,

@@ -2,15 +2,13 @@ from pathlib import Path
 from typing import List, Optional
 
 import torch
+import torch.nn.utils as utils
+import tqdm
 from torch import Tensor
 from torch.nn import Module
-import torch.nn.utils as utils
 from torch.optim.lr_scheduler import _LRScheduler
 from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
-import tqdm
-
-from trima.datamodules import CityscapesDataModule
 
 
 class Trainer:
@@ -38,7 +36,7 @@ class Trainer:
             'model_state_dict': model.state_dict(),
             'epoch_idx': epoch_idx,
         }
-    
+
         for i, optimizer in enumerate(optimizers):
             checkpoint[f'optimizer_{i}'] = optimizer
             checkpoint[f'optimizer_{i}_state_dict'] = optimizer.state_dict()
@@ -97,16 +95,15 @@ class Trainer:
         if self.verbose:
             print(epoch_idx, average_loss)
 
-        #TODO for sch in schedulers
-        #if schedulers is not None:
-        #    scheduler.step()
+        for scheduler in schedulers:
+            scheduler.step()
 
         model.validation_epoch_end(epoch_idx=epoch_idx)
 
     def fit(
             self,
             model: Module,
-            datamodule: CityscapesDataModule,
+            datamodule,
         ) -> None:
         train_dataloader = datamodule.train_dataloader()
         val_dataloader = datamodule.val_dataloader()
@@ -143,7 +140,7 @@ class Trainer:
     def predict(
             self,
             model: Module,
-            datamodule: CityscapesDataModule,
+            datamodule,
         ) -> List[Tensor]:
         test_dataloader = datamodule.test_dataloader()
 
@@ -167,4 +164,3 @@ if __name__ == '__main__':
         version='0',
     )
     print(trainer)
-

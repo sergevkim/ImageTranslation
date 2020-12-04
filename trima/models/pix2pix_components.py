@@ -44,7 +44,9 @@ class EncoderBlock(Module):
                 num_features=out_channels,
             )
 
-        block_ordered_dict['leaky_relu'] = LeakyReLU(negative_slope=negative_slope)
+        block_ordered_dict['leaky_relu'] = LeakyReLU(
+            negative_slope=negative_slope,
+        )
 
         self.encoder_block = Sequential(block_ordered_dict)
 
