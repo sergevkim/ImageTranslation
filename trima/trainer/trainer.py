@@ -48,7 +48,7 @@ class Trainer:
             self,
             model: Module,
             train_dataloader: DataLoader,
-            optimizer: Optimizer,
+            optimizers: List[Optimizer],
             epoch_idx: int,
         ) -> None:
         model.train()
@@ -59,8 +59,11 @@ class Trainer:
             losses.append(loss.item())
             loss.backward()
             utils.clip_grad_norm_(parameters=model.parameters(), max_norm=10)
-            optimizer.step()
-            optimizer.zero_grad()
+
+            for optimizer in optimizers:
+                optimizer.step()
+                optimizer.zero_grad()
+
             model.training_step_end()
 
         average_loss = sum(losses) / len(losses)
@@ -75,7 +78,7 @@ class Trainer:
             self,
             model: Module,
             val_dataloader: DataLoader,
-            scheduler: Optional[_LRScheduler],
+            schedulers: List[_LRScheduler],
             epoch_idx: int,
         ) -> None:
         model.eval()
@@ -91,8 +94,9 @@ class Trainer:
         if self.verbose:
             print(epoch_idx, average_loss)
 
-        if scheduler is not None:
-            scheduler.step()
+        #TODO for sch in schedulers
+        #if schedulers is not None:
+        #    scheduler.step()
 
         model.validation_epoch_end(epoch_idx=epoch_idx)
 
@@ -103,7 +107,7 @@ class Trainer:
         ) -> None:
         train_dataloader = datamodule.train_dataloader()
         val_dataloader = datamodule.val_dataloader()
-        optimizer, scheduler = model.configure_optimizers()
+        optimizers, schedulers = model.configure_optimizers()
 
         self.validation_epoch(
             model=model,
@@ -115,19 +119,19 @@ class Trainer:
             self.training_epoch(
                 model=model,
                 train_dataloader=train_dataloader,
-                optimizer=optimizer,
+                optimizers=optimizers,
                 epoch_idx=epoch_idx,
             )
             self.validation_epoch(
                 model=model,
                 val_dataloader=val_dataloader,
-                scheduler=scheduler,
+                schedulers=schedulers,
                 epoch_idx=epoch_idx,
             )
             if epoch_idx % 5 == 0:
                 self.save_checkpoint(
                     model=model,
-                    optimizer=optimizer,
+                    optimizers=optimizers,
                     epoch_idx=epoch_idx,
                     checkpoints_dir=Path.cwd() / "models",
                 )
@@ -150,4 +154,14 @@ class Trainer:
         model.test_epoch_end()
 
         return predicts
+
+
+if __name__ == '__main__':
+    trainer = Trainer(
+        logger=None,
+        max_epoch=1,
+        verbose=True,
+        version='0',
+    )
+    print(trainer)
 
