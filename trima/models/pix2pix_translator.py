@@ -52,7 +52,7 @@ class Pix2PixTranslator(Module):
             self,
             x: Tensor,
         ) -> Tensor:
-        generate_x = self.generator(x)
+        generated_x = self.generator(x)
 
         return generated_x
 
@@ -63,22 +63,31 @@ class Pix2PixTranslator(Module):
             fake_predicts: Tensor,
             lambda_coef: float = 100,
         ) -> Tensor:
-        g_fake_loss = self.adv_criterion(fake_predicts, 1)
+        g_fake_loss = self.adv_criterion(
+            input=fake_predicts,
+            target=torch.ones_like(fake_predicts),
+        )
         g_l1_loss = self.l1_criterion(gen_outputs, ground_truths)
         g_loss = g_fake_loss + lambda_coef * g_l1_loss
 
-        return generator_loss
+        return g_loss
 
     def discriminator_training_step(
             self,
             fake_predicts: Tensor,
             real_predicts: Tensor,
         ) -> Tensor:
-        d_fake_loss = self.adv_criterion(fake_predicts, 0)
-        d_real_loss = self.adv_criterion(real_predicts, 1)
+        d_fake_loss = self.adv_criterion(
+            input=fake_predicts,
+            target=torch.zeros_like(fake_predicts),
+        )
+        d_real_loss = self.adv_criterion(
+            input=real_predicts,
+            target=torch.ones_like(real_predicts),
+        )
         d_loss = d_fake_loss + d_real_loss
 
-        return discriminator_loss
+        return d_loss
 
     def training_step(
             self,
@@ -123,13 +132,26 @@ class Pix2PixTranslator(Module):
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        left, right = batch
-        left = left.to(self.device)
-        right = right.to(self.device)
+        ground_truths, inputs = batch
+        ground_truths = ground_truths.to(self.device)
+        inputs = inputs.to(self.device)
 
-        left_hat = self(right)
+        gen_outputs = self.generator(inputs) #TODO add noise
+        fake_predicts = self.discriminator(gen_outputs) #TODO add condition inputs
+        real_predicts = self.discriminator(ground_truths) #TODO add condition inputs
 
-        loss = self.criterion(left_hat, left)
+        generator_loss = self.generator_training_step(
+            ground_truths=ground_truths,
+            gen_outputs=gen_outputs,
+            fake_predicts=fake_predicts,
+        )
+
+        discriminator_loss = self.discriminator_training_step(
+            fake_predicts=fake_predicts,
+            real_predicts=real_predicts,
+        )
+
+        loss = generator_loss + discriminator_loss
 
         return loss
 
@@ -156,14 +178,19 @@ class Pix2PixTranslator(Module):
         )
         optimizers = [generator_optimizer, discriminator_optimizer]
 
-        scheduler = StepLR(
-            optimizer=optimizer,
+        generator_scheduler = StepLR(
+            optimizer=generator_optimizer,
             step_size=self.scheduler_step_size,
             gamma=self.scheduler_gamma,
         )
-        schedulers = [scheduler]
+        discriminator_scheduler = StepLR(
+            optimizer=discriminator_optimizer,
+            step_size=self.scheduler_step_size,
+            gamma=self.scheduler_gamma,
+        )
+        schedulers = [generator_scheduler, discriminator_scheduler]
 
-        return optimizers, scheduler
+        return optimizers, schedulers
 
 
 if __name__ == '__main__':
@@ -173,4 +200,3 @@ if __name__ == '__main__':
     ).to(device)
 
     print(translator)
-

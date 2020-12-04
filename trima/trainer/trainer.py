@@ -29,17 +29,20 @@ class Trainer:
     def save_checkpoint(
             self,
             model: Module,
-            optimizer: Optimizer,
+            optimizers: Optimizer,
             epoch_idx: int,
             checkpoints_dir: Path,
         ) -> None:
         checkpoint = {
             'model': model,
-            'optimizer': optimizer,
             'model_state_dict': model.state_dict(),
-            'optimizer': optimizer.state_dict(),
             'epoch_idx': epoch_idx,
         }
+    
+        for i, optimizer in enumerate(optimizers):
+            checkpoint[f'optimizer_{i}'] = optimizer
+            checkpoint[f'optimizer_{i}_state_dict'] = optimizer.state_dict()
+
         checkpoint_path = checkpoints_dir / f"v{self.version}-e{epoch_idx}.hdf5"
         torch.save(checkpoint, checkpoint_path)
 
@@ -112,7 +115,7 @@ class Trainer:
         self.validation_epoch(
             model=model,
             val_dataloader=val_dataloader,
-            scheduler=None,
+            schedulers=[],
             epoch_idx=0,
         )
         for epoch_idx in range(1, self.max_epoch + 1):
