@@ -1,5 +1,5 @@
 #!/bin/sh
 
 pip install -e .
-rm -rf tirma.egg-info
+rm -rf trima.egg-info
 
