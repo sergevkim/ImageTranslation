@@ -10,7 +10,7 @@ from torch.optim.optimizer import Optimizer
 from torch.utils.data import DataLoader
 import tqdm
 
-from tirma.datamodules import CityscapesDataModule
+from trima.datamodules import CityscapesDataModule
 
 
 class Trainer:
