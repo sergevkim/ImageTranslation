@@ -26,9 +26,8 @@ class Pix2PixTranslator(Module):
             learning_rate: float,
             scheduler_step_size: int,
             scheduler_gamma: float,
-            mode: str,
-            encoder_blocks_num: int,
-            decoder_blocks_num: int,
+            generator_blocks_num: int,
+            discriminator_blocks_num: int,
             verbose: bool,
         ):
         super().__init__()
@@ -41,18 +40,22 @@ class Pix2PixTranslator(Module):
         self.criterion = L1Loss()
         self.verbose = verbose
         self.generator = Pix2PixUNet(
-            blocks_num=encoder_blocks_num,
+            blocks_num=generator_blocks_num,
+            in_channels=3,
+            out_channels=3,
         )
-        self.discriminator = Pix2PixConvNet()
+        self.discriminator = Pix2PixConvNet(
+            blocks_num=discriminator_blocks_num,
+            in_channels=3,
+        )
 
     def forward(
             self,
             x: Tensor,
         ) -> Tensor:
-        if self.mode == 'unet':
-            unetted_x = self.generator(x)
+        generate_x = self.generator(x)
 
-            return unetted_x
+        return generated_x
 
     def training_step(
             self,
@@ -65,7 +68,15 @@ class Pix2PixTranslator(Module):
 
         left_hat = self(right)
 
-        loss = self.criterion(left_hat, left)
+        generator_adversarial_loss = None
+        generator_l1_loss = None
+        generator_loss = generator_adversaial_loss + generator_l1_loss
+
+        discriminator_fake_loss = None
+        discriminator_real_loss = None
+        discriminator_loss = discriminator_fake_loss + discriminator_real_loss
+
+        loss = generator_loss + discriminator_loss
 
         return loss
 
@@ -104,16 +115,23 @@ class Pix2PixTranslator(Module):
         if self.verbose:
             print(f"Validation epoch {epoch_idx} is over.")
 
-    def configure_optimizers(self) -> Tuple[Optimizer, _LRScheduler]:
-        optimizer = Adam(
-            params=self.parameters(),
+    def configure_optimizers(
+            self,
+        ) -> Tuple[List[Optimizer], List[_LRScheduler]]:
+        generator_optimizer = Adam(
+            params=self.generator.parameters(),
             lr=self.learning_rate,
         )
+        discriminator_optimizer = Adam(
+            params=self.discriminator.parameters(),
+            lr=self.learning_rate,
+        )
+        optimizers = [generator_optimizer, discriminator_optimizer]
         scheduler = StepLR(
             optimizer=optimizer,
             step_size=self.scheduler_step_size,
             gamma=self.scheduler_gamma,
         )
 
-        return optimizer, scheduler
+        return optimizers, scheduler
 

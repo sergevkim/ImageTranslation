@@ -13,6 +13,7 @@ from torch.nn import (
     ModuleList,
     ReLU,
     Sequential,
+    Sigmoid,
     Tanh,
 )
 
@@ -25,26 +26,33 @@ class EncoderBlock(Module):
             kernel_size: int = 4,
             stride: int = 2,
             padding: int = 1,
+            batch_norm: bool = True,
+            negative_slope: float = 0.2,
         ):
         super().__init__()
-        block_ordered_dict = OrderedDict(
-            conv = Conv2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=kernel_size,
-                stride=stride,
-                padding=padding,
-            ),
-            #batch_norm=BatchNorm2d(num_features=out_channels),
-            leaky_relu=LeakyReLU(negative_slope=0.2),
+        block_ordered_dict = OrderedDict()
+        block_ordered_dict['conv'] = Conv2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
         )
-        self.block_sequential = Sequential(block_ordered_dict)
+
+        if batch_norm:
+            block_ordered_dict['batch_norm'] = BatchNorm2d(
+                num_features=out_channels,
+            )
+
+        block_ordered_dict['leaky_relu'] = LeakyReLU(negative_slope=negative_slope)
+
+        self.encoder_block = Sequential(block_ordered_dict)
 
     def forward(
             self,
             x: Tensor,
         ) -> Tensor:
-        return self.block_sequential(x)
+        return self.encoder_block(x)
 
 
 class DecoderBlock(Module):
@@ -56,35 +64,44 @@ class DecoderBlock(Module):
             stride: int = 2,
             padding: int = 1,
             dropout_p: float = 0.5,
+            batch_norm: bool = True,
         ):
         super().__init__()
-        block_ordered_dict = OrderedDict(
-            conv=ConvTranspose2d(
-                in_channels=in_channels,
-                out_channels=out_channels,
-                kernel_size=kernel_size,
-                stride=stride,
-                padding=padding,
-            ),
-            #batch_norm=BatchNorm2d(num_features=out_channels),
-            dropout=Dropout(p=dropout_p),
-            relu=ReLU(),
+        block_ordered_dict = OrderedDict()
+        block_ordered_dict['conv_transpose'] = ConvTranspose2d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            stride=stride,
+            padding=padding,
         )
-        self.block_sequential = Sequential(block_ordered_dict)
+
+        if batch_norm:
+            block_ordered_dict['batch_norm'] = BatchNorm2d(
+                num_features=out_channels,
+            )
+
+        if dropout_p > 0:
+            block_ordered_dict['dropout'] = Dropout(p=dropout_p)
+
+        block_ordered_dict['relu'] = ReLU()
+
+        self.decoder_block = Sequential(block_ordered_dict)
 
     def forward(
             self,
             x: Tensor,
         ) -> Tensor:
-        return self.block_sequential(x)
+        return self.decoder_block(x)
 
 
 class Pix2PixUNet(Module):
     def __init__(
             self,
             blocks_num: int,
-            hidden_dim: int = 512,
+            in_channels: int = 3,
             out_channels: int = 3,
+            hidden_dim: int = 512,
         ):
         super().__init__()
         self.blocks_num = blocks_num
@@ -92,8 +109,9 @@ class Pix2PixUNet(Module):
 
         self.encoder_blocks = ModuleList()
         self.encoder_blocks.append(EncoderBlock(
-            in_channels=3,
+            in_channels=in_channels,
             out_channels=hidden_dim,
+            batch_norm=False,
         ))
         for i in range(1, blocks_num):
             self.encoder_blocks.append(EncoderBlock(
@@ -152,9 +170,58 @@ class Pix2PixUNet(Module):
         return x
 
 
+class Pix2PixConvNet(Module):
+    def __init__(
+            self,
+            blocks_num: int = 4,
+            in_channels: int = 3,
+        ):
+        super().__init__()
+        blocks_ordered_dict = OrderedDict()
+
+        blocks_ordered_dict['block_0'] = EncoderBlock(
+            in_channels=in_channels,
+            out_channels=in_channels * 2,
+            batch_norm=False,
+        )
+
+        cur_channels = in_channels * 2
+
+        for i in range(1, blocks_num):
+            blocks_ordered_dict[f'block_{i}'] = EncoderBlock(
+                in_channels=cur_channels,
+                out_channels=cur_channels * 2,
+            )
+            cur_channels *= 2
+
+        self.blocks = Sequential(blocks_ordered_dict)
+        self.last_conv = Sequential(
+            Conv2d(
+                in_channels=cur_channels,
+                out_channels=1,
+                kernel_size=1,
+                padding=1,
+            ),
+            Sigmoid(),
+        )
+
+    def forward(
+            self,
+            x: Tensor
+        ) -> Tensor:
+
+        x = self.blocks(x)
+        x = self.last_conv(x)
+
+        return x
+
+
 if __name__ == '__main__':
     generator = Pix2PixUNet(blocks_num=8)
-    discriminator = Pix2PixConvNet()
+    discriminator = Pix2PixConvNet(
+        blocks_num=4,
+        in_channels=3,
+    )
 
     print(generator)
     print(discriminator)
