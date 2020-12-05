@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from trima.datamodules import CityscapesDataModule
 from trima.loggers import NeptuneLogger
 from trima.models import (
-    #CycleGANTranslator,
+    CycleGANTranslator,
     Pix2PixTranslator,
 )
 from trima.trainer import Trainer

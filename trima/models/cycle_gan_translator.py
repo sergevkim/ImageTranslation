@@ -12,13 +12,13 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
 
-from trima.models.pix2pix_components import (
-    Pix2PixUNet,
-    Pix2PixConvNet,
+from trima.models.cycle_gan_components import (
+    CycleGANUNet,
+    CycleGANConvNet,
 )
 
 
-class Pix2PixTranslator(Module):
+class CycleGANTranslator(Module):
     def __init__(
             self,
             learning_rate: float = 3e-4,
