@@ -15,7 +15,7 @@ class CommonArguments:
 @dataclass
 class DataArguments:
     batch_size: int = 2
-    data_path: Path = Path('./data/facades')
+    data_path: Path = Path('./data')
     learning_rate: float = 3e-4
     num_workers: int = 4
     val_ratio: float = 0.1
@@ -23,6 +23,7 @@ class DataArguments:
 
 @dataclass
 class TrainArguments:
+    saving_period: int = 50
     max_epoch: int = 10
     one_batch_overfit: bool = True
     scheduler_gamma: float = 0.5
@@ -31,6 +32,5 @@ class TrainArguments:
 
 @dataclass
 class SpecificArguments:
-    generator_blocks_num: int = 8
-    discriminator_blocks_num: int = 4
+    specific: bool = True
 
