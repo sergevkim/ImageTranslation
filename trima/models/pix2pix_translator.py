@@ -45,7 +45,7 @@ class Pix2PixTranslator(Module):
         )
         self.discriminator = Pix2PixConvNet(
             blocks_num=discriminator_blocks_num,
-            in_channels=3,
+            in_channels=6,
         )
 
     def forward(

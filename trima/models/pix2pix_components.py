@@ -221,7 +221,7 @@ if __name__ == '__main__':
     generator = Pix2PixUNet(blocks_num=8)
     discriminator = Pix2PixConvNet(
         blocks_num=4,
-        in_channels=3,
+        in_channels=6,
     )
 
     print(generator)
