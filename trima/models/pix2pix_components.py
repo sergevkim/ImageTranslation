@@ -103,7 +103,7 @@ class Pix2PixUNet(Module):
             blocks_num: int,
             in_channels: int = 3,
             out_channels: int = 3,
-            hidden_dim: int = 512,
+            hidden_dim: int = 256,
         ):
         super().__init__()
         self.blocks_num = blocks_num
@@ -176,30 +176,28 @@ class Pix2PixConvNet(Module):
     def __init__(
             self,
             blocks_num: int = 4,
-            in_channels: int = 3,
+            in_channels: int = 6,
+            hidden_dim: int = 128,
         ):
         super().__init__()
         blocks_ordered_dict = OrderedDict()
 
         blocks_ordered_dict['block_0'] = EncoderBlock(
             in_channels=in_channels,
-            out_channels=in_channels * 2,
+            out_channels=hidden_dim,
             batch_norm=False,
         )
 
-        cur_channels = in_channels * 2
-
         for i in range(1, blocks_num):
             blocks_ordered_dict[f'block_{i}'] = EncoderBlock(
-                in_channels=cur_channels,
-                out_channels=cur_channels * 2,
+                in_channels=hidden_dim,
+                out_channels=hidden_dim,
             )
-            cur_channels *= 2
 
         self.blocks = Sequential(blocks_ordered_dict)
         self.last_conv = Sequential(
             Conv2d(
-                in_channels=cur_channels,
+                in_channels=hidden_dim,
                 out_channels=1,
                 kernel_size=1,
                 padding=1,
@@ -209,9 +207,10 @@ class Pix2PixConvNet(Module):
 
     def forward(
             self,
-            x: Tensor
+            images: Tensor,
+            conditions: Tensor,
         ) -> Tensor:
-
+        x = torch.cat([images, conditions], dim=1)
         x = self.blocks(x)
         x = self.last_conv(x)
 
