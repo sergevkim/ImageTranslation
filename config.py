@@ -15,7 +15,7 @@ class CommonArguments:
 @dataclass
 class DataArguments:
     batch_size: int = 2
-    data_path: Path = Path('./data')
+    data_path: Path = Path('./data/facades')
     learning_rate: float = 3e-4
     num_workers: int = 4
     val_ratio: float = 0.1
@@ -32,5 +32,6 @@ class TrainArguments:
 
 @dataclass
 class SpecificArguments:
-    specific: bool = True
+    generator_blocks_num: int = 8
+    discriminator_blocks_num: int = 4
 
