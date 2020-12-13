@@ -13,21 +13,23 @@ from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
 
 from trima.models.cycle_gan_components import (
-    CycleGANUNet,
-    CycleGANConvNet,
+    CycleGANX2YGenerator,
+    CycleGANXDiscriminator,
+    CycleGANY2XGenerator,
+    CycleGANYDiscriminator,
 )
 
 
 class CycleGANTranslator(Module):
     def __init__(
             self,
+            device: torch.device = torch.device('cpu'),
             learning_rate: float = 3e-4,
             scheduler_step_size: int = 10,
             scheduler_gamma: float = 0.5,
+            verbose: bool = True,
             generator_blocks_num: int = 8,
             discriminator_blocks_num: int = 4,
-            verbose: bool = True,
-            device: torch.device = torch.device('cpu'),
         ):
         super().__init__()
 
@@ -35,18 +37,15 @@ class CycleGANTranslator(Module):
         self.learning_rate = learning_rate
         self.scheduler_step_size = scheduler_step_size
         self.scheduler_gamma = scheduler_gamma
-        self.l1_criterion = L1Loss()
-        self.adv_criterion = BCELoss()
         self.verbose = verbose
-        self.generator = Pix2PixUNet(
-            blocks_num=generator_blocks_num,
-            in_channels=3,
-            out_channels=3,
-        )
-        self.discriminator = Pix2PixConvNet(
-            blocks_num=discriminator_blocks_num,
-            in_channels=3,
-        )
+
+        self.l1_criterion = MSELoss()
+        self.adv_criterion = BCELoss()
+
+        self.x2y_generator = CycleGANX2YGenerator()
+        self.y2x_generator = CycleGANY2XGenerator()
+        self.y_discriminator = CycleGANYDiscriminator()
+        self.x_discriminator = CycleGANXDiscriminator()
 
     def forward(
             self,
@@ -56,13 +55,13 @@ class CycleGANTranslator(Module):
 
         return generated_x
 
-    def generator_training_step(
+    def y_generator_training_step(
             self,
             ground_truths: Tensor,
             gen_outputs: Tensor,
             fake_predicts: Tensor,
             lambda_coef: float = 100,
-        ) -> Tensor:
+        ) -> Tensor: #TODO ALL
         g_fake_loss = self.adv_criterion(
             input=fake_predicts,
             target=torch.ones_like(fake_predicts),
@@ -72,11 +71,11 @@ class CycleGANTranslator(Module):
 
         return g_loss
 
-    def discriminator_training_step(
+    def y_discriminator_training_step(
             self,
             fake_predicts: Tensor,
             real_predicts: Tensor,
-        ) -> Tensor:
+        ) -> Tensor: #TODO ALL
         d_fake_loss = self.adv_criterion(
             input=fake_predicts,
             target=torch.zeros_like(fake_predicts),
@@ -94,26 +93,28 @@ class CycleGANTranslator(Module):
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        ground_truths, inputs = batch
-        ground_truths = ground_truths.to(self.device)
-        inputs = inputs.to(self.device)
+        x_original, y_original = batch
+        x_original = x_original.to(self.device)
 
-        gen_outputs = self.generator(inputs) #TODO add noise
-        fake_predicts = self.discriminator(gen_outputs) #TODO add condition inputs
-        real_predicts = self.discriminator(ground_truths) #TODO add condition inputs
+        y_generated = self.x2y_generator(x_original)
+        fake_y_predicts = self.y_discriminator(y_generated)
+        real_y_predicts = self.y_discriminator(y_original)
 
-        generator_loss = self.generator_training_step(
-            ground_truths=ground_truths,
-            gen_outputs=gen_outputs,
-            fake_predicts=fake_predicts,
+        x_generated = self.y2x_generator(y_generated)
+        fake_x_predicts = self.x_discriminator(x_generated)
+        real_x_predicts = self.x_discriminator(x_original)
+
+        y_generator_loss = self.y_generator_training_step()
+        y_discriminator_loss = self.y_discriminator_training_step()
+        x_generator_loss = self.x_generator_training_step()
+        x_discriminator_loss = self.x_discriminator_training_step()
+
+        loss = (
+            y_generator_loss
+            + y_discriminator_loss
+            + x_generator_loss
+            + x_discriminator_loss
         )
-
-        discriminator_loss = self.discriminator_training_step(
-            fake_predicts=fake_predicts,
-            real_predicts=real_predicts,
-        )
-
-        loss = generator_loss + discriminator_loss
 
         return loss
 
