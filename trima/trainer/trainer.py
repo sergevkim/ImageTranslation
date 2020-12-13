@@ -16,11 +16,13 @@ class Trainer:
             self,
             logger,
             max_epoch: int,
+            saving_period: int,
             verbose: bool,
             version: str,
         ):
         self.logger = logger
         self.max_epoch = max_epoch
+        self.saving_period = saving_period
         self.verbose = verbose
         self.version = version
 
@@ -41,8 +43,20 @@ class Trainer:
             checkpoint[f'optimizer_{i}'] = optimizer
             checkpoint[f'optimizer_{i}_state_dict'] = optimizer.state_dict()
 
-        checkpoint_path = checkpoints_dir / f"v{self.version}-e{epoch_idx}.hdf5"
+        checkpoint_path = checkpoints_dir / f"v{self.version}-e{epoch_idx}.pt"
         torch.save(checkpoint, checkpoint_path)
+
+    def load_checkpoint(
+            self,
+            model: Module,
+            optimizers: List[Optimizer],
+            checkpoint_path: Path,
+        ) -> None:
+        checkpoint = torch.load(checkpoint_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+
+        for i, optimizer in enumerate(optimizers):
+            optimizer.load_state_dict(checkpoint[f'optimizer_{i}_state_dict'])
 
     @torch.enable_grad()
     def training_epoch(
@@ -128,7 +142,7 @@ class Trainer:
                 schedulers=schedulers,
                 epoch_idx=epoch_idx,
             )
-            if epoch_idx % 5 == 0:
+            if epoch_idx % self.saving_period == 0:
                 self.save_checkpoint(
                     model=model,
                     optimizers=optimizers,

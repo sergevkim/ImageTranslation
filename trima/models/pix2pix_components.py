@@ -31,12 +31,18 @@ class EncoderBlock(Module):
         ):
         super().__init__()
         block_ordered_dict = OrderedDict()
-        block_ordered_dict['conv'] = Conv2d(
+        block_ordered_dict['conv_0'] = Conv2d(
             in_channels=in_channels,
             out_channels=out_channels,
             kernel_size=kernel_size,
             stride=stride,
             padding=padding,
+        )
+        block_ordered_dict['conv_1'] = Conv2d(
+            in_channels=out_channels,
+            out_channels=out_channels,
+            kernel_size=3,
+            padding=1,
         )
 
         if batch_norm:
@@ -103,7 +109,7 @@ class Pix2PixUNet(Module):
             blocks_num: int,
             in_channels: int = 3,
             out_channels: int = 3,
-            hidden_dim: int = 512,
+            hidden_dim: int = 64,
         ):
         super().__init__()
         self.blocks_num = blocks_num
@@ -118,8 +124,9 @@ class Pix2PixUNet(Module):
         for i in range(1, blocks_num):
             self.encoder_blocks.append(EncoderBlock(
                 in_channels=hidden_dim,
-                out_channels=hidden_dim,
+                out_channels=hidden_dim * 2,
             ))
+            hidden_dim *= 2
 
         self.decoder_blocks = ModuleList()
         self.decoder_blocks.append(DecoderBlock(
@@ -139,8 +146,7 @@ class Pix2PixUNet(Module):
             Conv2d(
                 in_channels=hidden_dim,
                 out_channels=out_channels,
-                kernel_size=3,
-                padding=1,
+                kernel_size=1,
             ),
             Tanh(),
         )
@@ -155,17 +161,15 @@ class Pix2PixUNet(Module):
             x = encoder_block(x)
             encoded_x[i] = x.clone().detach()
 
-        x = self.decoder_blocks[0](x)
-
         for i, decoder_block in enumerate(self.decoder_blocks):
             if i == 0:
                 continue
 
-            xx = torch.cat(
+            x = decoder_block(x)
+            x = torch.cat(
                 tensors=[x, encoded_x[self.blocks_num - 1 - i]],
                 dim=1,
             )
-            x = decoder_block(xx)
 
         x = self.last_conv(x)
 
@@ -176,30 +180,28 @@ class Pix2PixConvNet(Module):
     def __init__(
             self,
             blocks_num: int = 4,
-            in_channels: int = 3,
+            in_channels: int = 6,
+            hidden_dim: int = 128,
         ):
         super().__init__()
         blocks_ordered_dict = OrderedDict()
 
         blocks_ordered_dict['block_0'] = EncoderBlock(
             in_channels=in_channels,
-            out_channels=in_channels * 2,
+            out_channels=hidden_dim,
             batch_norm=False,
         )
 
-        cur_channels = in_channels * 2
-
         for i in range(1, blocks_num):
             blocks_ordered_dict[f'block_{i}'] = EncoderBlock(
-                in_channels=cur_channels,
-                out_channels=cur_channels * 2,
+                in_channels=hidden_dim,
+                out_channels=hidden_dim,
             )
-            cur_channels *= 2
 
         self.blocks = Sequential(blocks_ordered_dict)
         self.last_conv = Sequential(
             Conv2d(
-                in_channels=cur_channels,
+                in_channels=hidden_dim,
                 out_channels=1,
                 kernel_size=1,
                 padding=1,
@@ -209,10 +211,14 @@ class Pix2PixConvNet(Module):
 
     def forward(
             self,
-            x: Tensor
+            images: Tensor,
+            conditions: Tensor,
         ) -> Tensor:
-
-        x = self.blocks(x)
+        xx = torch.cat(
+            tensors=[images, conditions],
+            dim=1,
+        )
+        x = self.blocks(xx)
         x = self.last_conv(x)
 
         return x
@@ -222,7 +228,7 @@ if __name__ == '__main__':
     generator = Pix2PixUNet(blocks_num=8)
     discriminator = Pix2PixConvNet(
         blocks_num=4,
-        in_channels=3,
+        in_channels=6,
     )
 
     print(generator)

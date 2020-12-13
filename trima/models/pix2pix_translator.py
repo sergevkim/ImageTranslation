@@ -45,7 +45,7 @@ class Pix2PixTranslator(Module):
         )
         self.discriminator = Pix2PixConvNet(
             blocks_num=discriminator_blocks_num,
-            in_channels=3,
+            in_channels=6,
         )
 
     def forward(
@@ -94,13 +94,13 @@ class Pix2PixTranslator(Module):
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        ground_truths, inputs = batch
+        ground_truths, conditions = batch
         ground_truths = ground_truths.to(self.device)
-        inputs = inputs.to(self.device)
+        conditions = conditions.to(self.device)
 
-        gen_outputs = self.generator(inputs) #TODO add noise
-        fake_predicts = self.discriminator(gen_outputs) #TODO add condition inputs
-        real_predicts = self.discriminator(ground_truths) #TODO add condition inputs
+        gen_outputs = self.generator(conditions) #TODO add noise
+        fake_predicts = self.discriminator(gen_outputs, conditions)
+        real_predicts = self.discriminator(ground_truths, conditions)
 
         generator_loss = self.generator_training_step(
             ground_truths=ground_truths,
@@ -132,13 +132,13 @@ class Pix2PixTranslator(Module):
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        ground_truths, inputs = batch
+        ground_truths, conditions = batch
         ground_truths = ground_truths.to(self.device)
-        inputs = inputs.to(self.device)
+        conditions = conditions.to(self.device)
 
-        gen_outputs = self.generator(inputs) #TODO add noise
-        fake_predicts = self.discriminator(gen_outputs) #TODO add condition inputs
-        real_predicts = self.discriminator(ground_truths) #TODO add condition inputs
+        gen_outputs = self.generator(conditions) #TODO add noise
+        fake_predicts = self.discriminator(gen_outputs, conditions)
+        real_predicts = self.discriminator(ground_truths, conditions)
 
         generator_loss = self.generator_training_step(
             ground_truths=ground_truths,

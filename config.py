@@ -23,6 +23,7 @@ class DataArguments:
 
 @dataclass
 class TrainArguments:
+    saving_period: int = 50
     max_epoch: int = 10
     one_batch_overfit: bool = True
     scheduler_gamma: float = 0.5
