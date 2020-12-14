@@ -20,7 +20,7 @@ from config import (
 def main(args):
     Randomer.set_seed(seed=args.seed)
 
-    model = Pix2PixTranslator(
+    model = CycleGANTranslator(
         learning_rate=args.learning_rate,
         scheduler_gamma=args.scheduler_gamma,
         scheduler_step_size=args.scheduler_step_size,

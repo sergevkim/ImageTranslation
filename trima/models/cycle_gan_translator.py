@@ -12,7 +12,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
 
-from cycle_gan_components import (
+from trima.models.cycle_gan_components import (
     CycleGANX2YGenerator,
     CycleGANXDiscriminator,
     CycleGANY2XGenerator,
@@ -58,6 +58,7 @@ class CycleGANTranslator(Module):
         return generated_x
 
     def y_adv_training_step(
+            self,
             y_predicts,
             y_1_predicts,
         ):
@@ -75,6 +76,7 @@ class CycleGANTranslator(Module):
         return loss
 
     def x_adv_training_step(
+            self,
             x_predicts,
             x_1_predicts,
         ):
@@ -117,8 +119,8 @@ class CycleGANTranslator(Module):
             batch_idx: int,
         ) -> Tensor:
         x, y = batch
-        x = x.to(device)
-        y = y.to(device)
+        x = x.to(self.device)
+        y = y.to(self.device)
 
         y_1 = self.x2y_generator(x)
         x_1 = self.y2x_generator(y)
@@ -183,29 +185,30 @@ class CycleGANTranslator(Module):
     def configure_optimizers(
             self,
         ) -> Tuple[List[Optimizer], List[_LRScheduler]]:
-        generator_optimizer = Adam(
-            params=self.generator.parameters(),
+        x2y_generator_optimizer = Adam(
+            params=self.x2y_generator.parameters(),
             lr=self.learning_rate,
         )
-        discriminator_optimizer = Adam(
-            params=self.discriminator.parameters(),
+        y2x_generator_optimizer = Adam(
+            params=self.y2x_generator.parameters(),
             lr=self.learning_rate,
         )
-        optimizers = [generator_optimizer, discriminator_optimizer]
-
-        generator_scheduler = StepLR(
-            optimizer=generator_optimizer,
-            step_size=self.scheduler_step_size,
-            gamma=self.scheduler_gamma,
+        y_discriminator_optimizer = Adam(
+            params=self.y_discriminator.parameters(),
+            lr=self.learning_rate,
         )
-        discriminator_scheduler = StepLR(
-            optimizer=discriminator_optimizer,
-            step_size=self.scheduler_step_size,
-            gamma=self.scheduler_gamma,
+        x_discriminator_optimizer = Adam(
+            params=self.x_discriminator.parameters(),
+            lr=self.learning_rate,
         )
-        schedulers = [generator_scheduler, discriminator_scheduler]
+        optimizers = [
+            x2y_generator_optimizer,
+            y2x_generator_optimizer,
+            y_discriminator_optimizer,
+            x_discriminator_optimizer,
+        ]
 
-        return optimizers, schedulers
+        return optimizers, []
 
 
 if __name__ == '__main__':
