@@ -12,7 +12,7 @@ from torch.optim import Adam
 from torch.optim.lr_scheduler import _LRScheduler, StepLR
 from torch.optim.optimizer import Optimizer
 
-from trima.models.cycle_gan_components import (
+from cycle_gan_components import (
     CycleGANX2YGenerator,
     CycleGANXDiscriminator,
     CycleGANY2XGenerator,
@@ -39,8 +39,10 @@ class CycleGANTranslator(Module):
         self.scheduler_gamma = scheduler_gamma
         self.verbose = verbose
 
-        self.l1_criterion = MSELoss()
-        self.adv_criterion = BCELoss()
+        self.y_l1_criterion = L1Loss()
+        self.x_l1_criterion = L1Loss()
+        self.y_adv_criterion = BCELoss()
+        self.x_adv_criterion = BCELoss()
 
         self.x2y_generator = CycleGANX2YGenerator()
         self.y2x_generator = CycleGANY2XGenerator()
@@ -55,66 +57,97 @@ class CycleGANTranslator(Module):
 
         return generated_x
 
-    def y_generator_training_step(
+    def y_adv_training_step(
+            y_predicts,
+            y_1_predicts,
+        ):
+        fake_loss = self.y_adv_criterion(
+            y_1_predicts,
+            torch.ones_like(y_1_predicts),
+        )
+        real_loss = self.y_adv_criterion(
+            y_predicts,
+            torch.zeros_like(y_predicts),
+        )
+
+        loss = fake_loss + real_loss
+
+        return loss
+
+    def x_adv_training_step(
+            x_predicts,
+            x_1_predicts,
+        ):
+        fake_loss = self.x_adv_criterion(
+            x_1_predicts,
+            torch.ones_like(x_1_predicts),
+        )
+        real_loss = self.x_adv_criterion(
+            x_predicts,
+            torch.zeros_like(x_predicts),
+        )
+
+        loss = fake_loss + real_loss
+
+        return loss
+
+    def cyc_training_step(
             self,
-            ground_truths: Tensor,
-            gen_outputs: Tensor,
-            fake_predicts: Tensor,
-            lambda_coef: float = 100,
-        ) -> Tensor: #TODO ALL
-        g_fake_loss = self.adv_criterion(
-            input=fake_predicts,
-            target=torch.ones_like(fake_predicts),
+            x_2,
+            y_2,
+            x,
+            y,
+        ) -> Tensor:
+        x_l1_loss = self.x_l1_criterion(
+            x_2,
+            x,
         )
-        g_l1_loss = self.l1_criterion(gen_outputs, ground_truths)
-        g_loss = g_fake_loss + lambda_coef * g_l1_loss
-
-        return g_loss
-
-    def y_discriminator_training_step(
-            self,
-            fake_predicts: Tensor,
-            real_predicts: Tensor,
-        ) -> Tensor: #TODO ALL
-        d_fake_loss = self.adv_criterion(
-            input=fake_predicts,
-            target=torch.zeros_like(fake_predicts),
+        y_l1_loss = self.y_l1_criterion(
+            y_2,
+            y,
         )
-        d_real_loss = self.adv_criterion(
-            input=real_predicts,
-            target=torch.ones_like(real_predicts),
-        )
-        d_loss = d_fake_loss + d_real_loss
 
-        return d_loss
+        loss = x_l1_loss + y_l1_loss
+
+        return loss
 
     def training_step(
             self,
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        x_original, y_original = batch
-        x_original = x_original.to(self.device)
+        x, y = batch
+        x = x.to(device)
+        y = y.to(device)
 
-        y_generated = self.x2y_generator(x_original)
-        fake_y_predicts = self.y_discriminator(y_generated)
-        real_y_predicts = self.y_discriminator(y_original)
+        y_1 = self.x2y_generator(x)
+        x_1 = self.y2x_generator(y)
+        x_2 = self.y2x_generator(y_1)
+        y_2 = self.x2y_generator(x_1)
 
-        x_generated = self.y2x_generator(y_generated)
-        fake_x_predicts = self.x_discriminator(x_generated)
-        real_x_predicts = self.x_discriminator(x_original)
+        y_predicts = self.y_discriminator(y)
+        x_predicts = self.x_discriminator(x)
+        y_1_predicts = self.y_discriminator(y_1)
+        x_1_predicts = self.x_discriminator(x_1)
+        #x_2_predicts = self.x_discriminator(x_2)
+        #y_2_predicts = self.y_discriminator(y_2)
 
-        y_generator_loss = self.y_generator_training_step()
-        y_discriminator_loss = self.y_discriminator_training_step()
-        x_generator_loss = self.x_generator_training_step()
-        x_discriminator_loss = self.x_discriminator_training_step()
-
-        loss = (
-            y_generator_loss
-            + y_discriminator_loss
-            + x_generator_loss
-            + x_discriminator_loss
+        y_adv_loss = self.y_adv_training_step(
+            y_predicts,
+            y_1_predicts,
         )
+        x_adv_loss = self.x_adv_training_step(
+            x_predicts,
+            x_1_predicts,
+        )
+        cyc_loss = self.cyc_training_step(
+            x_2,
+            y_2,
+            x,
+            y,
+        )
+
+        loss = x_adv_loss + y_adv_loss + cyc_loss
 
         return loss
 
@@ -133,26 +166,7 @@ class CycleGANTranslator(Module):
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        ground_truths, inputs = batch
-        ground_truths = ground_truths.to(self.device)
-        inputs = inputs.to(self.device)
-
-        gen_outputs = self.generator(inputs) #TODO add noise
-        fake_predicts = self.discriminator(gen_outputs) #TODO add condition inputs
-        real_predicts = self.discriminator(ground_truths) #TODO add condition inputs
-
-        generator_loss = self.generator_training_step(
-            ground_truths=ground_truths,
-            gen_outputs=gen_outputs,
-            fake_predicts=fake_predicts,
-        )
-
-        discriminator_loss = self.discriminator_training_step(
-            fake_predicts=fake_predicts,
-            real_predicts=real_predicts,
-        )
-
-        loss = generator_loss + discriminator_loss
+        loss = self.training_step(batch, batch_idx)
 
         return loss
 
@@ -196,7 +210,7 @@ class CycleGANTranslator(Module):
 
 if __name__ == '__main__':
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    translator = Pix2PixTranslator(
+    translator = CycleGANTranslator(
         device=device,
     ).to(device)
 
