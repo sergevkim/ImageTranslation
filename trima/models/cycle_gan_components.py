@@ -123,7 +123,7 @@ class CycleGANYDiscriminator(Module):
             out_channels=out_channels,
             kernel_size=1,
         )
-        blocks['tanh'] = Tanh()
+        blocks['sigmoid'] = Sigmoid()
 
         self.blocks = Sequential(blocks)
 
