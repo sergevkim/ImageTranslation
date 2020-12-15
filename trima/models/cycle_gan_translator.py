@@ -53,9 +53,9 @@ class CycleGANTranslator(Module):
             self,
             x: Tensor,
         ) -> Tensor:
-        generated_x = self.generator(x)
+        generated_y = self.x2y_generator(x)
 
-        return generated_x
+        return generated_y
 
     def y_adv_training_step(
             self,
