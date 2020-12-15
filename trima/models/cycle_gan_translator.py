@@ -29,8 +29,6 @@ class CycleGANTranslator(Module):
             scheduler_gamma: float = 0.5,
             verbose: bool = True,
             lambda_coef: float = 20,
-            generator_blocks_num: int = 8,
-            discriminator_blocks_num: int = 4,
         ):
         super().__init__()
 
@@ -96,65 +94,83 @@ class CycleGANTranslator(Module):
 
         return loss
 
-    def cyc_training_step(
-            self,
-            x_2,
-            y_2,
-            x,
-            y,
-        ) -> Tensor:
-        x_l1_loss = self.x_l1_criterion(
-            x_2,
-            x,
-        )
-        y_l1_loss = self.y_l1_criterion(
-            y_2,
-            y,
-        )
-
-        loss = x_l1_loss + y_l1_loss
-
-        return loss
-
     def training_step(
             self,
             batch: Tensor,
             batch_idx: int,
+            optimizer_idx: int,
         ) -> Tensor:
         x, y = batch
         x = x.to(self.device)
         y = y.to(self.device)
 
-        y_1 = self.x2y_generator(x)
-        x_1 = self.y2x_generator(y)
-        x_2 = self.y2x_generator(y_1)
-        y_2 = self.x2y_generator(x_1)
+        if optimizer_idx % 4 == 0:
+            y_1 = self.x2y_generator(x)
+            y_1_predicts = self.y_discriminator(y_1)
+            x_2 = self.y2x_generator(y_1)
 
-        y_predicts = self.y_discriminator(y)
-        x_predicts = self.x_discriminator(x)
-        y_1_predicts = self.y_discriminator(y_1)
-        x_1_predicts = self.x_discriminator(x_1)
-        #x_2_predicts = self.x_discriminator(x_2)
-        #y_2_predicts = self.y_discriminator(y_2)
+            g_adv_loss = self.y_adv_criterion(
+                input=y_1_predicts,
+                target=torch.ones_like(y_1_predicts),
+            )
+            cyc_loss = self.x_l1_criterion(
+                x_2,
+                x,
+            )
+            loss = g_adv_loss + cyc_loss
 
-        y_adv_loss = self.y_adv_training_step(
-            y_predicts,
-            y_1_predicts,
-        )
-        x_adv_loss = self.x_adv_training_step(
-            x_predicts,
-            x_1_predicts,
-        )
-        cyc_loss = self.cyc_training_step(
-            x_2,
-            y_2,
-            x,
-            y,
-        )
+            return loss
 
-        loss = x_adv_loss + y_adv_loss + self.lambda_coef * cyc_loss
+        elif optimizer_idx % 4 == 1:
+            x_1 = self.y2x_generator(y)
+            x_1_predicts = self.x_discriminator(x_1)
+            y_2 = self.x2y_generator(x_1)
 
-        return loss
+            g_adv_loss = self.x_adv_criterion(
+                input=x_1_predicts,
+                target=torch.ones_like(x_1_predicts),
+            )
+            cyc_loss = self.y_l1_criterion(
+                y_2,
+                y,
+            )
+            loss = g_adv_loss + cyc_loss
+
+            return loss
+
+        elif optimizer_idx % 4 == 2:
+            y_1 = self.x2y_generator(x)
+            y_predicts = self.y_discriminator(y)
+            y_1_predicts = self.y_discriminator(y_1)
+
+            fake_loss = self.y_adv_criterion(
+                input=y_1_predicts,
+                target=torch.zeros_like(y_1_predicts),
+            )
+            real_loss = self.y_adv_criterion(
+                input=y_predicts,
+                target=torch.ones_like(y_predicts),
+            )
+            loss = fake_loss + real_loss
+
+            return loss
+
+        elif optimizer_idx % 4 == 3:
+            x_1 = self.y2x_generator(y)
+            x_predicts = self.x_discriminator(x)
+            x_1_predicts = self.x_discriminator(x_1)
+
+            fake_loss = self.x_adv_criterion(
+                input=x_1_predicts,
+                target=torch.zeros_like(x_1_predicts),
+            )
+            real_loss = self.y_adv_criterion(
+                input=x_predicts,
+                target=torch.ones_like(x_predicts),
+            )
+            loss = fake_loss + real_loss
+
+            return loss
 
     def training_step_end(self):
         pass
@@ -171,7 +187,11 @@ class CycleGANTranslator(Module):
             batch: Tensor,
             batch_idx: int,
         ) -> Tensor:
-        loss = self.training_step(batch, batch_idx)
+        loss = self.training_step(
+            batch,
+            batch_idx,
+            optimizer_idx=1,
+        )
 
         return loss
 

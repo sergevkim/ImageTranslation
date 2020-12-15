@@ -24,8 +24,6 @@ def main(args):
         learning_rate=args.learning_rate,
         scheduler_gamma=args.scheduler_gamma,
         scheduler_step_size=args.scheduler_step_size,
-        generator_blocks_num=args.generator_blocks_num,
-        discriminator_blocks_num=args.discriminator_blocks_num,
         verbose=args.verbose,
         device=args.device,
     ).to(args.device)

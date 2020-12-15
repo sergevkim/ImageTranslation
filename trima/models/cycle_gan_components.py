@@ -25,7 +25,7 @@ class ConvolutionalLayer(Module):
             in_channels: int,
             out_channels: int,
             kernel_size: int,
-            padding: int,
+            padding: int = 0,
             stride: int = 1,
             transpose: bool = False,
             norm: bool = True,
@@ -108,7 +108,7 @@ class ResidualBlock(Module):
 class CycleGANX2YGenerator(Module):
     def __init__(
             self,
-            num_blocks: int = 4,
+            num_blocks: int = 6,
         ):
         super().__init__()
 
@@ -147,7 +147,6 @@ class CycleGANX2YGenerator(Module):
                 in_channels=256,
                 out_channels=128,
                 kernel_size=2,
-                padding=0,
                 stride=2,
                 transpose=True,
             ),
@@ -155,7 +154,6 @@ class CycleGANX2YGenerator(Module):
                 in_channels=128,
                 out_channels=64,
                 kernel_size=2,
-                padding=0,
                 stride=2,
                 transpose=True,
             ),
@@ -187,7 +185,6 @@ class CycleGANYDiscriminator(Module):
                 in_channels=3,
                 out_channels=64,
                 kernel_size=4,
-                padding=0,
                 stride=2,
                 norm=False,
                 leaky=True,
@@ -196,7 +193,6 @@ class CycleGANYDiscriminator(Module):
                 in_channels=64,
                 out_channels=128,
                 kernel_size=4,
-                padding=0,
                 stride=2,
                 leaky=True,
             ),
@@ -204,7 +200,6 @@ class CycleGANYDiscriminator(Module):
                 in_channels=128,
                 out_channels=256,
                 kernel_size=4,
-                padding=0,
                 stride=2,
                 leaky=True,
             ),
@@ -212,7 +207,6 @@ class CycleGANYDiscriminator(Module):
                 in_channels=256,
                 out_channels=512,
                 kernel_size=4,
-                padding=0,
                 stride=2,
                 leaky=True,
             ),
