@@ -149,7 +149,7 @@ class CycleGANTranslator(Module):
             y,
         )
 
-        loss = x_adv_loss + y_adv_loss + cyc_loss
+        loss = x_adv_loss + y_adv_loss + 10 * cyc_loss
 
         return loss
 
