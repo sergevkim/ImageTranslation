@@ -28,6 +28,7 @@ class CycleGANTranslator(Module):
             scheduler_step_size: int = 10,
             scheduler_gamma: float = 0.5,
             verbose: bool = True,
+            lambda_coef: float = 20,
             generator_blocks_num: int = 8,
             discriminator_blocks_num: int = 4,
         ):
@@ -38,6 +39,8 @@ class CycleGANTranslator(Module):
         self.scheduler_step_size = scheduler_step_size
         self.scheduler_gamma = scheduler_gamma
         self.verbose = verbose
+
+        self.lambda_coef = lambda_coef
 
         self.y_l1_criterion = L1Loss()
         self.x_l1_criterion = L1Loss()
@@ -64,11 +67,11 @@ class CycleGANTranslator(Module):
         ):
         fake_loss = self.y_adv_criterion(
             y_1_predicts,
-            torch.ones_like(y_1_predicts),
+            torch.zeros_like(y_1_predicts),
         )
         real_loss = self.y_adv_criterion(
             y_predicts,
-            torch.zeros_like(y_predicts),
+            torch.ones_like(y_predicts),
         )
 
         loss = fake_loss + real_loss
@@ -82,11 +85,11 @@ class CycleGANTranslator(Module):
         ):
         fake_loss = self.x_adv_criterion(
             x_1_predicts,
-            torch.ones_like(x_1_predicts),
+            torch.zeros_like(x_1_predicts),
         )
         real_loss = self.x_adv_criterion(
             x_predicts,
-            torch.zeros_like(x_predicts),
+            torch.ones_like(x_predicts),
         )
 
         loss = fake_loss + real_loss
@@ -149,7 +152,7 @@ class CycleGANTranslator(Module):
             y,
         )
 
-        loss = x_adv_loss + y_adv_loss + 10 * cyc_loss
+        loss = x_adv_loss + y_adv_loss + self.lambda_coef * cyc_loss
 
         return loss
 
