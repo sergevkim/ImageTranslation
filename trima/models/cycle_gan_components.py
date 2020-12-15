@@ -50,6 +50,12 @@ class ConvolutionalLayer(Module):
                 padding=padding,
                 stride=stride,
             )
+            conv_block['conv_1'] = Conv2d(
+                in_channels=out_channels,
+                out_channels=out_channels,
+                kernel_size=3,
+                padding=1,
+            )
 
         if norm:
             conv_block['norm'] = InstanceNorm2d(num_features=out_channels)
