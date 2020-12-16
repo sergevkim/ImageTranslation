@@ -83,19 +83,16 @@ class ResidualBlock(Module):
         res_block = OrderedDict()
 
         for i in range(pieces_num):
-            piece = OrderedDict()
-            piece['conv'] = Conv2d(
-                in_channels=dim,
-                out_channels=dim,
-                kernel_size=3,
-                padding=1,
+            res_block[f'piece_{i}'] = Sequential(
+                Conv2d(
+                    in_channels=dim,
+                    out_channels=dim,
+                    kernel_size=3,
+                    padding=1,
+                ),
+                BatchNorm2d(dim),
+                ReLU(),
             )
-            piece['batch_norm'] = BatchNorm2d(dim)
-
-            if i != pieces_num - 1:
-                piece['relu'] = ReLU()
-
-            res_block[f'piece_{i}'] = Sequential(piece)
 
         self.res_block = Sequential(res_block)
 
